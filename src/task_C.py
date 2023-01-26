@@ -1,36 +1,70 @@
 import task_A
-from langdetect import detect_langs
+import base64
 
 
-def english_prob(text: str, dev_thresh: float) -> float:
+def english_p_value(text: str) -> float:
     letter_prob = 1 / len(text)
-    test_letters = [{'e': 0.13}, {'a', 0.82}, {'t': 0.91}]
-    found_letters = [{'e': 0.0}, {'a', 0.0}, {'t', 0.0}]
-    
+    EXPECTED_E_FREQ = 0.13
+    e_freq = 0
+
     for n in text:
-        for i in found_letters:
-            for key, val in i:
-                if key == n:
-                    val += letter_prob
+        if n == "e" or n == "E":
+            e_freq += letter_prob
 
-    print(found_letters)
+    return e_freq
 
-    return 0.0
+
+def maybe_english(text: str):
+    score = 0
+
+    for n in text:
+        if ord(n) != 34 and (ord(n) < 97 or ord(n) > 122):
+            score -= 0.5
+        if n == "e" or n == "E" or n == "a" or n == "A" or  n == "t" or n == "T":
+            score += 1.2
+
+    if score >= 3:
+        return True
+    return False
+
 
 def XOR_64(text_64: str, key: str):
-    pass
+    text_byte = base64.b64decode(text_64)
+    return task_A.XOR_bytes(text_byte, key)
+
 
 def parse_file(filename: str, key: str):
     with open(filename, "r") as f:
         for line in f:
-            h = task_A.XOR_hex(line[:-1], key)
+            h = XOR_64(line[:-1], key)
             t = task_A.bytes_to_ascii(h)
 
-            if t is not None and english_prob(t) > 0.8:
+            if t is not None and maybe_english(t):
                 print(t)
+
+
+def generate_key(int_val):
+    radix = 256
+    vals = []
+    dec = int_val
+    while True:
+        q = dec // radix
+        if q == 0:
+            vals.append(dec)
+            break
+        else:
+            vals.append(dec % radix)
+        dec = q
+
+    vals = list(reversed(vals))
+
+    if vals is None:
+        return bytes([0])
+    return bytes(vals)
 
 
 if __name__ == "__main__":
     FILENAME = "../docs/Lab0.TaskII.C.txt"
-    for i in range(1, 10000):
-    parse_file(FILENAME, bytes(i))
+    for i in range(1, 10000000000000):
+        key = generate_key(i)
+        parse_file(FILENAME, key)
